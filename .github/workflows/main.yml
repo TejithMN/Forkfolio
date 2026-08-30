@@ -20,15 +20,20 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v3
-
-      - name: Generate Temporary Debug Keystore
+      - name: Locate Project & Build APK
         run: |
+          # Find directory containing settings.gradle.kts or build.gradle.kts
+          PROJECT_DIR=$(dirname $(find . -name "settings.gradle*" -o -name "build.gradle.kts" | head -n 1))
+          if [ -z "$PROJECT_DIR" ] || [ "$PROJECT_DIR" = "" ]; then
+            PROJECT_DIR="."
+          fi
+          echo "Project located in: $PROJECT_DIR"
+          cd "$PROJECT_DIR"
+
+          # Generate debug keystore
           keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US" || true
 
-      - name: Build Debug APK
-        run: |
+          # Build APK
           chmod +x gradlew || true
           if [ -f "./gradlew" ]; then
             ./gradlew assembleDebug --no-daemon --stacktrace
@@ -40,4 +45,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Forkfolio-app-debug
-          path: app/build/outputs/apk/debug/*.apk
+          path: "**/app/build/outputs/apk/debug/*.apk"
