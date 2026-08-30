@@ -20,30 +20,36 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Set up Android SDK
+      - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Build APK with Auto-Keystore
+      - name: Build Android APK
         run: |
-          # Locate project directory
-          PROJECT_DIR=$(dirname $(find . -name "settings.gradle*" -o -name "build.gradle.kts" | head -n 1))
-          if [ -z "$PROJECT_DIR" ] || [ "$PROJECT_DIR" = "" ]; then
-            PROJECT_DIR="."
+          # 1. Create .env and .env.example across all directories
+          echo "FIREBASE_APPCHECK_DEBUG_TOKEN=" > .env.example
+          echo "FIREBASE_APPCHECK_DEBUG_TOKEN=" > .env
+          find . -type d -exec cp .env.example {}/ \; 2>/dev/null || true
+          find . -type d -exec cp .env {}/ \; 2>/dev/null || true
+
+          # 2. Locate root folder containing settings.gradle
+          SETTINGS_FILE=$(find . -name "settings.gradle*" | head -n 1)
+          if [ -n "$SETTINGS_FILE" ]; then
+            PROJECT_DIR=$(dirname "$SETTINGS_FILE")
+            cd "$PROJECT_DIR"
           fi
-          cd "$PROJECT_DIR"
+          echo "Building inside: $(pwd)"
 
-          # Create debug keystore in all required locations
+          # 3. Create debug keystores
           keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US" || true
+          mkdir -p app ~/.android
           cp debug.keystore app/debug.keystore || true
-          mkdir -p ~/.android && cp debug.keystore ~/.android/debug.keystore || true
+          cp debug.keystore ~/.android/debug.keystore || true
 
-          # Remove strict debug signing config requirement if present in build file
-          find . -name "build.gradle.kts" -exec sed -i 's/signingConfig = signingConfigs.getByName("debugConfig")//g' {} + || true
-
-          # Accept Android licenses and build APK
+          # 4. Accept Android SDK licenses
           yes | sdkmanager --licenses || true
           chmod +x gradlew || true
 
+          # 5. Build APK
           if [ -f "./gradlew" ]; then
             ./gradlew assembleDebug --no-daemon --stacktrace
           else
@@ -54,4 +60,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Forkfolio-app-debug
-          path: "**/app/build/outputs/apk/debug/*.apk"
+          path: "**/build/outputs/apk/debug/*.apk"
