@@ -1,0 +1,7 @@
+{
+  "name": "Forkfolio",
+  "description": "A luxury cream and gold culinary recipe book for mom and family to share, view in-app YouTube recipes, bookmark favorites, and manage links via an admin panel.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+
